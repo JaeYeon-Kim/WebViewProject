@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.inputmethod.EditorInfo
+import android.webkit.URLUtil
 import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -97,8 +98,13 @@ class MainActivity : AppCompatActivity() {
         addressBar.setOnEditorActionListener { v, actionId,event ->
             // 주소창에서 입력을 하고 done버튼을 눌렀을 때
             if(actionId == EditorInfo.IME_ACTION_DONE) {
-                // editText에 입력한것을 toString()으로 변환하여 url을 불러옴.
-                webView.loadUrl(v.text.toString())
+                val loadingUrl = v.text.toString()
+                // url 앞이 http나 https가 있는지 여부 확인후 붙여줌
+                if(URLUtil.isNetworkUrl(loadingUrl)) {
+                    webView.loadUrl(loadingUrl)
+                } else {
+                    webView.loadUrl("http://$loadingUrl")
+                }
             }
 
             return@setOnEditorActionListener false
@@ -138,19 +144,24 @@ class MainActivity : AppCompatActivity() {
         }
 
         // 웹뷰의 load가 끝났을 때 swipeRefreshLayout의 isRefreshing을 false로 변경해준다.
-
         override fun onPageFinished(view: WebView?, url: String?) {
             super.onPageFinished(view, url)
 
             refreshLayout.isRefreshing = false
             progressBar.hide()
+
             // history가 없을때 backButton 비활성화 하기
             goBackButton.isEnabled = webView.canGoBack()
             goForwardButton.isEnabled = webView.canGoForward()
+            // 최종적으로 로딩된 url을 보여줌.
+            addressBar.setText(url)
+
         }
     }
 
     // progressBar의 progress를 로딩상태에 따라 보여줌.
+    // inner class로 상위 클래스에 접근함.
+    // newProgress => 0~100 사이의 값이 들어옴
     inner class WebChromeClient: android.webkit.WebChromeClient() {
         override fun onProgressChanged(view: WebView?, newProgress: Int) {
             super.onProgressChanged(view, newProgress)
